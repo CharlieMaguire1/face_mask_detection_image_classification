@@ -1,0 +1,5 @@
+/CW_Dataset/**/*.jpeg
+/CW_Dataset/**/*.jpg
+/CW_Dataset/**/*.png
+/CW_Dataset/**/*.txt
+/Models/*.pkl
