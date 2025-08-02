@@ -1,4 +1,8 @@
 ##### CW_Folder/Code/train_kmeans.py #####
+
+# Modified by: Charlie Maguire with any incorporation of sources listed below
+
+# Libraries needed:
 import cv2
 import numpy as np
 import os
@@ -10,6 +14,7 @@ from config import random_seed, img_train_dir # Importing variables from config.
 
 # ===== For Model 1: SIFT + BovW + MLP =====
 
+# Incorporated kmeans from: https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html
 sift = cv2.SIFT_create()
 sift_descriptors = [] # Collecting all descriptors from images
 

@@ -1,6 +1,7 @@
 ##### CW_Folder/Code/transforms.py #####
 
-# This file is for reusable functions for feature extraction methods and image transformations
+# Modified by: Charlie Maguire with any incorporation of sources listed in the code
+# This file is for reusable functions for feature extraction methods and image transforms for PyTorch CNN models
 
 # Libraries needed
 import cv2
@@ -9,19 +10,13 @@ import joblib
 from torchvision import transforms
 from skimage.feature import hog
 
-# ====== These are transforms/ preprocessing for each Model =====
-# Inspired by the code on DataCamp: https://campus.datacamp.com/courses/intermediate-deep-learning-with-pytorch/images-convolutional-neural-networks?ex=8
+# ====== These are transforms/ preprocessing for each CNN Model (Model 3 and 4) =====
+# Inspired by the code on DataCamp's Images Convolutional Neural Networks section in Intermediate Deep Learning with PyTorch: 
+#   -https://campus.datacamp.com/courses/intermediate-deep-learning-with-pytorch/images-convolutional-neural-networks?ex=8
 # And for the pretrained Model 3 from Torchvision Docs: https://docs.pytorch.org/vision/stable/models.html
 
 def model_transforms(model):
-    if model in ["sift", "hog"]:
-        return transforms.Compose([
-            transforms.Resize((128, 128)),
-            transforms.RandomHorizontalFlip(),
-            transforms.ToTensor()
-        ])
-    
-    elif model == "mobilenet":
+    if model == "mobilenet":
         return transforms.Compose([
             transforms.Resize((224, 224)),
             transforms.RandomHorizontalFlip(),

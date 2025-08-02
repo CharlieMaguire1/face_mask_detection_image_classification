@@ -1,4 +1,8 @@
 ##### CW_Folder/Code/config.py #####
+
+# Modified by: Charlie Maguire 
+
+# Libraries needed:
 import os
 import sys
 from utils import get_img_paths_and_targets # Helper function from utils.py
@@ -25,11 +29,14 @@ targets_test_dir = os.path.join(dataset_root_dir, "test", "labels")
 img_train_path = get_img_paths_and_targets(img_train_dir, targets_train_dir)
 img_test_path = get_img_paths_and_targets(img_test_dir, targets_test_dir)
 
-# Other configuration settings
+
+# ===== Other configuration settings =====
+
 random_seed = 1 # reproducibility 
+
+# This maps models according to torchvision transform settings in transforms.py
+# Only used for the pretrained CNN and custom CNN (model 3 and 4)
 model_transform_map = {
-    "model_1": "sift",
-    "model_2": "hog",
     "model_3": "mobilenet",
     "model_4": "custom_cnn"
 }
