@@ -1,6 +1,7 @@
 ##### CW_Folder/Code/dataset.py #####
 
-# Modified by: Charlie Maguire with the incorporation of multiple sources listed below
+# Mostly inspired by DataCamp: https://app.datacamp.com/learn/courses/intermediate-deep-learning-with-pytorch
+# Created/modified by: Charlie Maguire with the incorporation of multiple sources listed below
 # This file is for reproducible Dataset subclasses 
 
 # Libraries needed
@@ -13,7 +14,7 @@ from transforms import compute_bovw_histogram, compute_hog_colour_histograms, mo
 
 # Dataset subclasses in preparation for DataLoaders/Batching in the model python files
 # All subclases here are based on DataCamp's Training Robust Neural Networks in their Intermediate Deep Learning with PyTorch course:
-#   - https://campus.datacamp.com/courses/intermediate-deep-learning-with-pytorch/training-robust-neural-networks?ex=1
+#   -https://campus.datacamp.com/courses/intermediate-deep-learning-with-pytorch/training-robust-neural-networks?ex=1
 
 
 # =========================== Model 1: SIFT (Grayscale conversion) + BovW + SVM ===============================================
@@ -73,10 +74,36 @@ class Model_2_Dataset(Dataset):
         return torch.tensor(feature_vector, dtype = torch.float32), self.targets[idx]
     
 
-# ============================= Model 3: HOG + Colour/Gradients + SVM ===========================================================
+# ============================== Model 3: MobileNetV2 (Pretrained CNN) =============================================================
 
 class Model_3_Dataset(Dataset):
     def __init__(self, img_paths, targets):
+        self.img_paths = img_paths
+        self.targets = targets
+        self.transforms = model_transforms("mobilenet")
+        
+    def __len__(self):
+        return len(self.img_paths)
+    
+    def __getitem__(self, idx):
+        img = Image.open(self.img_paths[idx]).convert("RGB")
+        return self.transforms(img), self.targets[idx]
+        
+
+# ========================================= Model 4: Custom CNN ===================================================================
+
+class Model_4_Dataset(Dataset):
+    def __init__(self, img_paths, targets):
+        self.img_paths = img_paths
+        self.targets = targets
+        self.transforms = model_transforms("custom_cnn")
+     
+    def __len__(self):
+        return len(self.img_paths) 
+        
+    def __getitem__(self, idx):
+        img = Image.open(self.img_paths[idx]).convert("RGB")
+        return self.transforms(img), self.targets[idx]
         
 
 
@@ -90,18 +117,6 @@ class Model_3_Dataset(Dataset):
 
 
 
-if __name__ == "__main__":
-    dummy_img_paths = [
-        "C:/Users/bretu/OneDrive/Desktop/MSC_DS_COURSE/CW_Folder/CW_Dataset/train/images/image_0000.jpeg",
-        "C:/Users/bretu/OneDrive/Desktop/MSC_DS_COURSE/CW_Folder/CW_Dataset/train/images/image_0001.jpeg"
-    ]
-    dummy_targets = [0, 1]
-    
-    dataset = Model_2_Dataset(dummy_img_paths, dummy_targets)
-    sample, label = dataset[0]
-    
-    print(f"Feature vector shape: {sample.shape}")
-    print(f"Label: {label}")
 
 
 

@@ -1,6 +1,7 @@
 ##### CW_Folder/Code/transforms.py #####
 
-# Modified by: Charlie Maguire with any incorporation of sources listed in the code
+# Mostly inspired by DataCamp: https://app.datacamp.com/learn/courses/intermediate-deep-learning-with-pytorch
+# Created/modified by: Charlie Maguire with any incorporation of sources listed in the code
 # This file is for reusable functions for feature extraction methods and image transforms for PyTorch CNN models
 
 # Libraries needed
@@ -13,7 +14,9 @@ from skimage.feature import hog
 # ====== These are transforms/ preprocessing for each CNN Model (Model 3 and 4) =====
 # Inspired by the code on DataCamp's Images Convolutional Neural Networks section in Intermediate Deep Learning with PyTorch: 
 #   -https://campus.datacamp.com/courses/intermediate-deep-learning-with-pytorch/images-convolutional-neural-networks?ex=8
-# And for the pretrained Model 3 from Torchvision Docs: https://docs.pytorch.org/vision/stable/models.html
+#   -https://campus.datacamp.com/courses/intermediate-deep-learning-with-pytorch/images-convolutional-neural-networks?ex=2
+# And for the pretrained Model 3 from Torchvision Docs: 
+#   -https://docs.pytorch.org/vision/stable/models.html
 
 def model_transforms(model):
     if model == "mobilenet":
