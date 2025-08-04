@@ -19,7 +19,7 @@ torch.manual_seed(random_seed)
 
 # ======= Preparation of DataLoaders for training and validation =======
 training_imgs, training_targets = img_train_path
-dataset_train = Model_2_Dataset(training_imgs, training_targets)
+dataset_train = Model_1_Dataset(training_imgs, training_targets)
 
 training_size = int(0.8 * len(dataset_train)) # Training set is 80% of train dataset
 validation_size = len(dataset_train) - training_size # Validation set is 20% of train dataset
@@ -78,33 +78,57 @@ for epoch in range(1000):
     model.train()
     accuracy.reset()
     loss_total = 0
-    for features, labels in dataloader_train:
+    for features, targets in dataloader_train:
         optimiser.zero_grad()
         outputs = model(features)
-        labels = labels.view(-1, 1)
-        loss = criterion(outputs, labels)
+        loss = criterion(outputs, targets)
         loss.backward()
         optimiser.step()
         
         loss_total += loss.item()
         
         predictions = torch.argmax(outputs, dim = 1)
-        accuracy.update(predictions, labels)
+        accuracy.update(predictions, targets)
         
-        
-        print(f"Epoch {epoch+1}, Loss: {loss_total:.df}, Train Accuracy: {accuracy_train:.4f}")
+    loss_average = loss_total / len(dataloader_train)   
+    accuracy_train = accuracy.compute()
+    print(f"Epoch {epoch+1}, Loss: {loss_average:.4f}, Train Accuracy: {accuracy_train:.4f}")
         
         
 # ========== Evaluation Loop (Validation) ===========
-f1_score = F1Score(task = )
+f1_score = F1Score(task = "multiclass", num_classes = 3, average = "macro")
+precision = Precision(task = "multiclass", num_classes = 3, average = "macro")
+recall = Precision(task = "multiclass", num_classes = 3, average = "macro")
 
+# Change to evaluation mode
 model.eval()
-accuracy.reset()
-with torch.no_grad():
-    for features, labels in dataloader_validation:
-        outputs = model(features)
-        predictions = torch(outputs, dim = 1)
-        accuracy.update(preds, labels)
 
+# Reset the metrics
+accuracy.reset()
+f1_score.reset()
+precision.reset()
+recall.reset()
+
+# Evaluation loop
+with torch.no_grad():
+    for features, targets in dataloader_validation:
+        outputs = model(features)
+        predictions = torch.argmax(outputs, dim = 1)
+        
+        # Update the metrics
+        accuracy.update(predictions, targets)
+        f1_score.update(predictions, targets)
+        precision.update(predictions, targets)
+        recall.update(predictions, targets)
+
+# Computing the metrics 
 accuracy_validation = accuracy.compute()
-print(f"Validation accuracy: {accuracy_validation:.4df}")
+f1_score_validation = f1_score.compute()
+precision_validation = precision.compute()
+recall_validation = recall.compute()
+
+# Printing the metrics
+print(f"Validation accuracy: {accuracy_validation:.4f}")
+print(f"Validation F1 Score: {f1_score_validation:.4f}")
+print(f"Validation precision: {precision_validation:.4f}")
+print(f"Validation recall: {recall_validation:.4f}")
