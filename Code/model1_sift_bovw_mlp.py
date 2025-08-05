@@ -8,37 +8,42 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 import torch.nn.init as init
+import numpy as np
 from torchmetrics import Accuracy, F1Score, Precision, Recall
 from torch.utils.data import Dataset, DataLoader, random_split
 
 from datasets import Model_1_Dataset
-from config import img_train_path, img_test_path, random_seed
+from config import img_train_path, img_test_path, random_seed, batch_size
+from data import get_dataloaders
 
 # Random seed imported for reproducibility
 torch.manual_seed(random_seed)
+np.random.seed(random_seed)
+if torch.cuda.is_available():
+    torch.cuda.manual_seed(random_seed)
+
+# Setting device to use GPU if available, otherwise use CPU
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(f"Using device: {device}")
 
 # ======= Preparation of DataLoaders for training and validation =======
 training_imgs, training_targets = img_train_path
-dataset_train = Model_1_Dataset(training_imgs, training_targets)
 
-training_size = int(0.8 * len(dataset_train)) # Training set is 80% of train dataset
-validation_size = len(dataset_train) - training_size # Validation set is 20% of train dataset
-
-training_split, validation_split = random_split(dataset_train, [training_size, 
-                                                                validation_size])
-
-dataloader_train = DataLoader(training_split, batch_size = 32, shuffle = True, num_workers = 4)
-dataloader_validation = DataLoader(validation_split, batch_size = 32, num_workers = 4)
+dataloader_train, dataloader_validation = get_dataloaders(training_imgs,
+                                                          training_targets,
+                                                          batch_size = batch_size,
+                                                          val_percent = 0.2,
+                                                          num_workers = 0)
 
 # ======== Preparation of DataLoader for testing =====================
 test_imgs, test_targets = img_test_path
 dataset_test = Model_1_Dataset(test_imgs, test_targets)
-
-dataloader_test = DataLoader(dataset_test, batch_size = 32, num_workers = 4)
+dataloader_test = DataLoader(dataset_test, batch_size = batch_size, 
+                             shuffle = False, num_workers = 0)
 
 # ==== Checking the sizes of the modifieed datasets
-print(f"Train size: {len(training_split)}")
-print(f"Val size: {len(validation_split)}")
+print(f"Train size: {len(dataloader_train.dataset)}")
+print(f"Val size: {len(dataloader_validation.dataset)}")
 print(f"Test size: {len(dataset_test)}")
 
 # ========= Definition of the 3 layer MLP (nn.Module subclass) ========

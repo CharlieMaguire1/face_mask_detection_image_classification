@@ -262,4 +262,7 @@ def test_SVM(model: Module, dataloader_test: DataLoader, accuracy: Accuracy, f1_
     print(f"Test recall: {recall_test:.4f}")   
     
     return accuracy_test, f1_score_test, precision_test, recall_test 
-            
+    
+   
+    
+    

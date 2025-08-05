@@ -8,18 +8,28 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
-import torchmetrics
 import optuna
+import copy
+import json
+import numpy as np
 from torchmetrics import Accuracy, F1Score, Precision, Recall
 from torch.utils.data import Dataset, TensorDataset, DataLoader, random_split
 from sklearn.preprocessing import StandardScaler
 
 from datasets import Model_2_Dataset
-from config import img_train_path, img_test_path, random_seed
+from config import img_train_path, img_test_path, random_seed, batch_size
 from utils import load_features_and_targets, train_SVM, validate_SVM, test_SVM, EarlyStoppingMin, EarlyStoppingMax
+from class_distribution import print_class_distribution
 
 # Random seed imported for reproducibility
 torch.manual_seed(random_seed)
+np.random.seed(random_seed)
+if torch.cuda.is_available():
+    torch.cuda.manual_seed(random_seed)
+
+# Setting device to use GPU if available, otherwise use CPU
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(f"Using device: {device}")
 
 # Set up the scaler for the SVM hinge loss
 scaler = StandardScaler()
@@ -56,8 +66,8 @@ training_split_scaled = TensorDataset(features_train_scaled, targets_train)
 validation_split_scaled = TensorDataset(features_validation_scaled, targets_validation)
 
 # Applying the DataLoader for batching
-dataloader_train = DataLoader(training_split_scaled, batch_size = 32, shuffle = True, num_workers = 4)
-dataloader_validation = DataLoader(validation_split_scaled, batch_size = 32, num_workers = 4)
+dataloader_train = DataLoader(training_split_scaled, batch_size = batch_size, shuffle = True, num_workers = 0)
+dataloader_validation = DataLoader(validation_split_scaled, batch_size = batch_size, num_workers = 0)
 
 # ======== Preparation of DataLoader for testing =====================
 # Instantiating the dataset subclass
@@ -74,7 +84,7 @@ targets_test = targets_test.type(torch.long)
 
 dataset_test_scaled = TensorDataset(features_test_scaled, targets_test)
 
-dataloader_test = DataLoader(dataset_test_scaled, batch_size = 32, num_workers = 4)
+dataloader_test = DataLoader(dataset_test_scaled, batch_size = batch_size, num_workers = 0)
 
 # ==== Checking the sizes of the modifieed datasets
 print(f"Train size: {len(training_split)}")
@@ -96,6 +106,7 @@ class SVM_ImageClassifier(nn.Module):
 
 # Instantiate model
 model = SVM_ImageClassifier(num_features = features_train.shape[1])
+model.to(device)
 
 # Using MultiMarginLoss for multiclass SVM
 criterion = nn.MultiMarginLoss()
@@ -168,18 +179,33 @@ def objective(trial: optuna, optuna.Trial):
 
 
 # ===================== TESTING LOOP ==============================
+# Checking the class imbalance
+print_class_distribution(training_split_scaled, "Training Set", class_targets=[0, 1, 2])
+print_class_distribution(validation_split_scaled, "Validation Set", class_targets=[0, 1, 2])
+print_class_distribution(dataset_test_scaled, "Test Set", class_targets=[0, 1, 2])  
 
+# Reintantiate the metrics
+accuracy = Accuracy(task = "multiclass", num_classes = 3)
+f1_score = F1Score(task = "multiclass", num_classes = 3, average = "macro")
+recall = Recall(task = "multiclass", num_classes = 3, average = "macro")   
+precision = Precision(task = "multiclass", num_classes = 3, average = "macro") 
+
+# Early Stopping Objects: One for loss and the other for metrics
+loss_stopping = EarlyStoppingMin(patience = 5, min_delta = 0.001)
+f1_stopping = EarlyStoppingMax(patience = 5, min_delta = 0.001)
+
+# The best parameters to be used for Training loop
 params_best = study.best_params
 
-# Redo the model with the best paramter values
+# Redo the model with the best parameter values
 model_best = SVM_ImageClassifier(num_features = features_train.shape[1])
 optimiser_best = optim.SGD(model_best.parameters(), lr = params_best["lr"])
 C_best = params_best["C"]
-
 criterion = nn.MultiMarginLoss() # Loss function
 
-# Instantiating the Early Stopping classes 
-stopping_early = EarlyStoppingMin(patience = 3, min_delta = 0.001)
+epoch_best = 0
+f1_best = -1.0
+model_state_best = None
 
 # Retraining and revalidating the model with the training data 
 for epoch in range(1000):
@@ -187,14 +213,33 @@ for epoch in range(1000):
     
     # Running the validation to get the validation loss
     validation_metrics = validate_SVM(model_best, dataloader_validation, accuracy, f1_score, precision, recall)
+    validation_loss = validation_metrics["loss"]
+    validation_f1 = validation_metrics["macro_f1"]
+    
+    print(f"Epoch {epoch + 1} | Validation Loss: {validation_loss:.4f} | Macro F1: {validation_metrics}")
+    
+    # Then save the best model according to the F1 score
+    if validation_f1 > f1_best:
+        f1_best = validation_f1
+        epoch_best = epoch + 1
+        model_state_best = copy.deepcopy(model_best.state_dict())
+    
+    if loss_stopping.stop_early(validation_loss) and f1_stopping.stop_early(validation_f1):
+        print(f"Early stopping done at epoch {epoch + 1}")
+        break
 
+# Restoring the best weights 
+model_best.load_state_dict(model_state_best)
 
+# Changing to evaluation mode before testing
+model_best.eval()
 
-# Reintantiate the metrics
-accuracy = Accuracy(task = "multiclass", num_classes = 3)
-f1_score = F1Score(task = "multiclass", num_classes = 3, average = "macro")
-recall = Recall(task = "multiclass", num_classes = 3, average = "macro")   
-precision = Precision(task = "multiclass", num_classes = 3, average = "macro")   
+# Saving the model weights
+torch.save(model_state_best, "../Models/best_model2_hog_svm.pt")
+
+# Saving the best parameters to the Models folder
+with open("../Models/best_param_model2_hog_svm.json", "w") as file:
+    json.dump(params_best, file, indent = 4)
 
 # Testing the model with reusable code
-test_SVM(model, dataloader_test, accuracy, f1_score, precision, recall) 
+test_SVM(model_best, dataloader_test, accuracy, f1_score, precision, recall) 
