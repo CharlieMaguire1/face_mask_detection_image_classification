@@ -9,12 +9,15 @@ import torch.optim as optim
 import torch.nn.functional as F
 import torch.nn.init as init
 import numpy as np
+import optuna
 from torchmetrics import Accuracy, F1Score, Precision, Recall
 from torch.utils.data import Dataset, DataLoader, random_split
+from optuna import Trial
 
 from datasets import Model_1_Dataset
 from config import img_train_path, img_test_path, random_seed, batch_size
-from data import get_dataloaders
+from data_functions import get_dataloaders
+from utils import train_NN, evaluate_NN, print_metrics
 
 # Random seed imported for reproducibility
 torch.manual_seed(random_seed)
@@ -68,72 +71,98 @@ class SIFT_MLPNet(nn.Module):
     
 # ============ Instantiate Model, Loss Function and Prepare Optimiser ==========
 # Instantiate the model
-model = SIFT_MLPNet()
+model = SIFT_MLPNet().to(device)
 
 # Set up the criterion for losses
 criterion = nn.CrossEntropyLoss()
 
 # Set up the optimiser
-optimiser = optim.Adam(model.parameters(), lr = 0.001, momentum = 0.9, weight_decay = 0.0005)
+optimiser = optim.Adam(model.parameters(), lr = 0.001, weight_decay = 0.0005)
 
 # ================= Training Loop =============
-accuracy = Accuracy(task = "multiclass", num_classes = 3)
+accuracy = Accuracy(task = "multiclass", num_classes = 3).to(device)
 
 for epoch in range(1000):
-    model.train()
-    accuracy.reset()
-    loss_total = 0
-    for features, targets in dataloader_train:
-        optimiser.zero_grad()
-        outputs = model(features)
-        loss = criterion(outputs, targets)
-        loss.backward()
-        optimiser.step()
-        
-        loss_total += loss.item()
-        
-        predictions = torch.argmax(outputs, dim = 1)
-        accuracy.update(predictions, targets)
-        
-    loss_average = loss_total / len(dataloader_train)   
-    accuracy_train = accuracy.compute()
+    loss_average, accuracy_train = train_NN(model = model, dataloader_train = dataloader_train,
+                                            criterion = criterion, optimiser = optimiser,
+                                            accuracy = accuracy, device = device)
+    
     print(f"Epoch {epoch+1}, Loss: {loss_average:.4f}, Train Accuracy: {accuracy_train:.4f}")
         
         
-# ========== Evaluation Loop (Validation) ===========
-f1_score = F1Score(task = "multiclass", num_classes = 3, average = "macro")
-precision = Precision(task = "multiclass", num_classes = 3, average = "macro")
-recall = Precision(task = "multiclass", num_classes = 3, average = "macro")
+# ============== EVALUATION (VALIDATION) LOOP ================
+accuracy = Accuracy(task = "multiclass", num_classes = 3)
+f1_score = F1Score(task = "multiclass", num_classes = 3, average = "macro").to(device)
+precision = Precision(task = "multiclass", num_classes = 3, average = "macro").to(device)
+recall = Recall(task = "multiclass", num_classes = 3, average = "macro").to(device)
 
-# Change to evaluation mode
-model.eval()
+accuracy_validation, f1_score_validation, precision_validation, recall_validation = evaluate_NN(
+    model = model, dataloader = dataloader_validation, accuracy = accuracy, f1_score = f1_score,
+    precision = precision, recall = recall, device = device
+)
 
-# Reset the metrics
-accuracy.reset()
-f1_score.reset()
-precision.reset()
-recall.reset()
+print_metrics("Validation", accuracy_validation, f1_score_validation, precision_validation,
+              recall_validation)
 
-# Evaluation loop
-with torch.no_grad():
-    for features, targets in dataloader_validation:
-        outputs = model(features)
-        predictions = torch.argmax(outputs, dim = 1)
-        
-        # Update the metrics
-        accuracy.update(predictions, targets)
-        f1_score.update(predictions, targets)
-        precision.update(predictions, targets)
-        recall.update(predictions, targets)
+# ============= HYPERPARAMETER TUNING  =============================
+# Inspired by DataCamp's, Hyperparameter optimization with Optuna, within their Deep Reinforcement Learning in Python course: 
+# https://campus.datacamp.com/courses/deep-reinforcement-learning-in-python/proximal-policy-optimization-and-drl-tips?ex=10
 
-# Computing the metrics 
-accuracy_validation = accuracy.compute()
-f1_score_validation = f1_score.compute()
-precision_validation = precision.compute()
-recall_validation = recall.compute()
+# Creating the study object
+study = optuna.create_study(direction = "maximize")
 
-# Printing the metrics
-print(f"Validation accuracy: {accuracy_validation:.4f}")
-print(f"Validation F1 Score: {f1_score_validation:.4f}")
-print(f"Validation precision: {precision_validation:.4f}")
-print(f"Validation recall: {recall_validation:.4f}")
+# Defining the objective function
+def objective(trial: Trial):
+    
+    lr = trial.suggest_float("lr", 0.0001, 0.1, log = True)
+    weight_decay = trial_suggest_float("weight_decay", 0.000001, 0.01, log = True)
+    
+    # Instantiating the MLP model 
+    model = SIFT_MLPNet().to(device)
+    
+    # Setting up the optimiser and loss
+    optimiser = optim.Adam(model.parameters(), lr = lr, weight_decay = weight_decay)
+    criterion = nn.CrossEntropyLoss()
+    
+    # Metrics
+    accuracy = Accuracy(task = "multiclass", num_classes = 3).to(device)
+    f1_score = F1Score(task = "multiclass", num_classes = 3, average = "macro").to(device)
+    precision = Precision(task = "multiclass", num_classes = 3, average = "macro").to(device)
+    recall = Recall(task = "multiclass", num_classes = 3, average = "macro").to(device)   
+    
+
+    # Training the model
+    for epoch in range(10):
+    loss_average, accuracy_train = train_NN(model = model, dataloader_train = dataloader_train,
+                                            criterion = criterion, optimiser = optimiser,
+                                            accuracy = accuracy, device = device)
+    
+    # Evaluate the model:
+    accuracy_validation, f1_score_validation, precision_validation, recall_validation = evaluate_NN(
+    model = model, dataloader = dataloader_validation, accuracy = accuracy, f1_score = f1_score,
+    precision = precision, recall = recall, device = device)
+    
+    return f1_score_validation.item()
+
+# Running the Optuna tuning
+
+
+
+
+
+
+# ================== EVALUATION (TESTING) LOOP ====================
+accuracy = Accuracy(task = "multiclass", num_classes = 3)
+f1_score = F1Score(task = "multiclass", num_classes = 3, average = "macro").to(device)
+precision = Precision(task = "multiclass", num_classes = 3, average = "macro").to(device)
+recall = Precision(task = "multiclass", num_classes = 3, average = "macro").to(device)
+
+accuracy_test, f1_score_test, precision_test, recall_test = evaluate_NN(
+    model = model, dataloader = dataloader_test, accuracy = accuracy, f1_score = f1_score,
+    precision = precision, recall = recall, device = device
+)
+
+print_metrics("Test", accuracy_test, f1_score_test, precision_test,
+              recall_test)
+
+

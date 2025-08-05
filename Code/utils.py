@@ -11,6 +11,9 @@ from torch.optim import Optimizer
 from torchmetrics import Accuracy, F1Score, Precision, Recall
 
 
+# Setting device to use GPU if available, otherwise use CPU
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 # Inspired by: 
 #    Python documentation for os.listdir(): https://docs.python.org/3/library/os.html#os.listdir
 #    Stack Overflow: https://stackoverflow.com/questions/3207219/how-do-i-list-all-files-of-a-directory
@@ -134,6 +137,8 @@ def train_SVM(model: Module , dataloader_train: DataLoader, criterion: Module,
         accuracy.reset()
         loss_total = 0
         for features, targets in dataloader_train:
+            features = features.to(device)
+            targets = targets.to(device)
             optimiser.zero_grad()
             outputs = model(features)
             
@@ -186,6 +191,8 @@ def validate_SVM(model: Module, dataloader_validation: DataLoader, accuracy: Acc
     # Evaluation loop
     with torch.no_grad():
         for features, targets in dataloader_validation:
+            features = features.to(device)
+            targets = targets.to(device)
             outputs = model(features)
             predictions = torch.argmax(outputs, dim = 1)
             
@@ -240,6 +247,8 @@ def test_SVM(model: Module, dataloader_test: DataLoader, accuracy: Accuracy, f1_
     
     with torch.no_grad():
         for features, targets in dataloader_test:
+            features = features.to(device)
+            targets = targets.to(device)
             outputs = model(features)
             predictions = torch.argmax(outputs, dim = 1)
             
@@ -263,6 +272,75 @@ def test_SVM(model: Module, dataloader_test: DataLoader, accuracy: Accuracy, f1_
     
     return accuracy_test, f1_score_test, precision_test, recall_test 
     
-   
+
+# ================ MLP AND CNN FUNCTIONS ==========================
+# NOTE: THESE FUNCTION ARE RAN PER EPOCH UNLIKE THE SVM FUNCTIONS ABOVE
+
+def train_NN(model: Module, dataloader_train: DataLoader, criterion: Module , 
+             optimiser: Optimizer, accuracy: Accuracy, device: torch):
+    model.train()
+    accuracy.reset()
+    loss_total = 0
+    for features, targets in dataloader_train:
+        features = features.to(device)
+        targets = targets.to(device)
+        optimiser.zero_grad()
+        outputs = model(features)
+        loss = criterion(outputs, targets)
+        loss.backward()
+        optimiser.step()
+        
+        loss_total += loss.item()
+        
+        predictions = torch.argmax(outputs, dim = 1)
+        accuracy.update(predictions, targets)
+        
+    loss_average = loss_total / len(dataloader_train)   
+    accuracy_train = accuracy.compute()
     
+    return loss_average, accuracy_train
+
+
+def evaluate_NN(model: Module, dataloader: DataLoader, accuracy: Accuracy, f1_score: F1Score, 
+                precision: Precision, recall: Recall, device: torch):
+    # Change to evaluation mode
+    model.eval()
+
+    # Reset the metrics
+    accuracy.reset()
+    f1_score.reset()
+    precision.reset()
+    recall.reset()
+
+    # Evaluation loop
+    with torch.no_grad():
+        for features, targets in dataloader:
+            features = features.to(device)
+            targets = targets.to(device)
+            outputs = model(features)
+            predictions = torch.argmax(outputs, dim = 1)
+            
+            # Update the metrics
+            accuracy.update(predictions, targets)
+            f1_score.update(predictions, targets)
+            precision.update(predictions, targets)
+            recall.update(predictions, targets)
+
+    return ( 
+        accuracy.compute(),
+        f1_score.compute(),
+        precision.compute(),
+        recall.compute())
+
+
+# Printing the metrics
+def print_metrics(split_name, accuracy: Accuracy, f1_score: F1Score, 
+                  precision: Precision, recall: Recall):
+    print(f"{split_name} Accuracy {accuracy:.4f}")
+    print(f"{split_name} F1 Score: {f1_score:.4f}")
+    print(f"{split_name} Precision: {precision:.4f}")
+    print(f"{split_name} Recall: {recall:.4f}")
+    
+    
+
     

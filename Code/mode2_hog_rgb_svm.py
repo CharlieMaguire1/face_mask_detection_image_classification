@@ -15,6 +15,7 @@ import numpy as np
 from torchmetrics import Accuracy, F1Score, Precision, Recall
 from torch.utils.data import Dataset, TensorDataset, DataLoader, random_split
 from sklearn.preprocessing import StandardScaler
+from optuna import Trial
 
 from datasets import Model_2_Dataset
 from config import img_train_path, img_test_path, random_seed, batch_size
@@ -128,7 +129,7 @@ C = 1.0 # L2 Regularisation (will be tuned later)
 train_SVM(model, dataloader_train, criterion, optimiser, C, accuracy)
 
       
-# ============== VALIDATION LOOP ================== 
+# ============== EVALUATION (VALIDATION) LOOP ================== 
 # Inspired by DataCamp: 
 #   -https://campus.datacamp.com/courses/intermediate-deep-learning-with-pytorch/training-robust-neural-networks?ex=6
 
@@ -150,7 +151,7 @@ validate_SVM(model, dataloader_validation, accuracy, f1_score, precision, recall
 study = optuna.create_study(direction = "maximize")
 
 # Defining the objective function for the optimisation process
-def objective(trial: optuna, optuna.Trial):
+def objective(trial: Trial):
     
     # Tuning C
     C = trial.suggest_float("C", 0.01, 10.0, log = True)
@@ -177,8 +178,12 @@ def objective(trial: optuna, optuna.Trial):
 
     return metrics.item()
 
+# Running the Optuna tuning
+study.optimize(objective, n_trials = 30)
 
-# ===================== TESTING LOOP ==============================
+
+
+# ===================== EVALUATION (TESTING) LOOP ==============================
 # Checking the class imbalance
 print_class_distribution(training_split_scaled, "Training Set", class_targets=[0, 1, 2])
 print_class_distribution(validation_split_scaled, "Validation Set", class_targets=[0, 1, 2])

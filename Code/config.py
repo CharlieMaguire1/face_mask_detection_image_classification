@@ -33,6 +33,7 @@ img_test_path = get_img_paths_and_targets(img_test_dir, targets_test_dir)
 # ===== Other configuration settings =====
 
 random_seed = 1 # reproducibility 
+batch_size = 32 # reproducibility 
 
 # This maps models according to torchvision transform settings in transforms.py
 # Only used for the pretrained CNN and custom CNN (model 3 and 4)
