@@ -1,0 +1,11 @@
+torch
+torchvision
+torchmetrics
+numpy
+opencv-python
+scikit-learn
+scikit-image
+matplotlib
+joblib
+optuna
+Pillow
