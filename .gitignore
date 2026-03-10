@@ -1,5 +1,22 @@
+# Dataset files
 /CW_Dataset/**/*.jpeg
 /CW_Dataset/**/*.jpg
 /CW_Dataset/**/*.png
 /CW_Dataset/**/*.txt
+
+# Model artifacts
 /Models/*.pkl
+/Models/*.pt
+/Models/*.json
+
+# Python cache
+__pycache__/
+**/__pycache__/
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+**/.ipynb_checkpoints/
+
+# OS / editor junk
+.DS_Store
+Thumbs.db
