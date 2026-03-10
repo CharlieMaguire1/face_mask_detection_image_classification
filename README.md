@@ -4,7 +4,7 @@
 
 This project compares **classical computer vision** and **deep learning** approaches for a 3-class face mask classification task.
 
-It explores handcrafted feature extraction, transfer learning, and custom neural network pipelines, then begins with extending the classifier toward a downstream video-based face-mask detection workflow.
+This project explores handcrafted feature extraction, transfer learning, and custom neural network pipelines. It begins with extending the classifier toward a downstream video-based face-mask detection workflow.
 
 
 ---
@@ -34,20 +34,20 @@ It also includes an unfinished **face-mask detection function** intended to run 
 - MLP classifier in PyTorch
 
 ### Model 2 — HOG + colour histograms + SVM
-- grayscale HOG descriptors
+- Grayscale HOG descriptors
 - RGB colour histogram features
-- concatenated handcrafted feature vector
-- custom multiclass linear SVM in PyTorch
+- Concatenated handcrafted feature vector
+- Custom multiclass linear SVM in PyTorch
 - Optuna tuning and checkpoint saving
 
 ### Model 3 — MobileNetV2
-- pretrained MobileNetV2 backbone
-- custom classification head
-- torchvision transforms and transfer-learning setup
+- Pretrained MobileNetV2 backbone
+- Custom classification head
+- Torchvision transforms and transfer-learning setup
 
 ### Model 4 — Custom CNN
-- dataset and transform scaffolding included
-- training pipeline not fully consolidated
+- Dataset and transform scaffolding included
+- Training pipeline not fully consolidated
 
 
 ---
@@ -57,10 +57,10 @@ It also includes an unfinished **face-mask detection function** intended to run 
 
 The repo also includes early work toward **video-based face-mask detection**, where the intended pipeline was:
 
-1. detect faces in video frames  
-2. crop and preprocess the face region  
-3. classify the face using the trained model  
-4. render bounding boxes and class labels  
+1. Detect faces in video frames  
+2. Crop and preprocess the face region  
+3. Classify the face using the trained model  
+4. Render bounding boxes and class labels  
 
 This deployment function is **not yet complete**.
 
@@ -96,7 +96,7 @@ face-mask-classification-cv/
 
 ## Dataset format
 
-The project expects image files and integer class labels stored as matching .txt files.
+The project expects the image files and integer class labels to be stored as matching .txt files.
 
 ```text
 CW_Dataset/
@@ -214,3 +214,4 @@ The known limitations are:
 
 This project is a MSc computer vision comparison project showing experimentation across both handcrafted and neural pipelines, with partial work towards deployment on video data.
   
+
